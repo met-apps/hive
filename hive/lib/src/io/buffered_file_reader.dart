@@ -63,26 +63,31 @@ class BufferedFileReader {
 
   /// Not part of public API
   Future<int> loadBytes(int bytes) async {
-    assert(bytes > 0);
-    var remaining = remainingInBuffer;
-    if (remaining >= bytes) {
-      return remaining;
-    } else {
-      var oldBuffer = buffer;
-      if (buffer.length < bytes) {
-        buffer = Uint8List(bytes);
+    try {
+      assert(bytes > 0);
+      var remaining = remainingInBuffer;
+      if (remaining >= bytes) {
+        return remaining;
+      } else {
+        var oldBuffer = buffer;
+        if (buffer.length < bytes) {
+          buffer = Uint8List(bytes);
+        }
+
+        for (var i = 0; i < remaining; i++) {
+          buffer[i] = oldBuffer[_bufferOffset + i];
+        }
+
+        _bufferOffset = 0;
+        var readBytes = await file!.readInto(buffer, remaining);
+        _bufferSize = remaining + readBytes;
+        _fileOffset += readBytes;
+
+        return _bufferSize;
       }
-
-      for (var i = 0; i < remaining; i++) {
-        buffer[i] = oldBuffer[_bufferOffset + i];
-      }
-
-      _bufferOffset = 0;
-      var readBytes = await file!.readInto(buffer, remaining);
-      _bufferSize = remaining + readBytes;
-      _fileOffset += readBytes;
-
-      return _bufferSize;
+    } catch (ex) {
+      print("[BufferedFileReader] LoadBytes exception : $ex");
+      return 0;
     }
   }
 }
